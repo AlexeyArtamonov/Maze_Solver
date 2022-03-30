@@ -168,7 +168,6 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 			matrix[x][y].state = '.';
 			matrix[x][y].from = opposite_dir(direction);
 		}
-
 	}
 	
 
