@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{8db7d33a-fe4e-4bb9-875f-aa2b2f5fc299}</ProjectGuid>
-    <RootNamespace>Testol</RootNamespace>
+    <RootNamespace>Maze_Solver</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>Maze_Solver</ProjectName>
   </PropertyGroup>
