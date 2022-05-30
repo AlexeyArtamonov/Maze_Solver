@@ -16,7 +16,7 @@ bool SetCursorPosition(short x, short y)
 #ifdef _WIN64
 	static HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
 	return SetConsoleCursorPosition(console, { x, y });
-#elif
+#else 
 	return false;
 #endif // _WIN64
 }
