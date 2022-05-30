@@ -141,10 +141,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="fairy_tail.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="Maze_Solver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fairy_tail.hpp" />
+    <ClInclude Include="maze_solver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

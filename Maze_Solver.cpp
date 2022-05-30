@@ -1,103 +1,80 @@
-﻿#include <windows.h>
+﻿#include "maze_solver.h"
+
 #include <thread>
 #include <chrono>
-#include <utility>
 
-#include "fairy_tail.hpp"
+#ifdef _WIN64
+#include <windows.h>
+#endif // _WIN64
 
-// Представляет клетку "Лабиринта"
-struct Cell
-{
-	char state; //	Состояния:
-				//	стена - #
-				//	неизвестно - ?
-				//	проход - .
-				//	Иван - @
-				//	Елена - &
-	int from;   // Направление из которого мы пришли в клетку
-	bool full_explored = false;
-};
-
-struct Result
-{
-	std::pair<int, int>				ivan_pos;
-	std::pair<int, int>				elena_pos;
-	int								turns_until_full_research = - 1;
-	int								turns_until_meet = -1;
-	std::vector<std::vector<Cell>>	matrix;
-};
-
-Direction	dirs[4] { Direction::Up, Direction::Right, Direction::Down, Direction::Left }; // Для итерации по направлениям
-
-// Смещения при движении в направлении с соответсвующим индексом
 int			yMove[4]{ -1, 0, 1, 0 };
 int			xMove[4]{ 0, 1, 0, -1 };
+Direction	dirs [4]{ Direction::Up, Direction::Right, Direction::Down, Direction::Left };
 
-int opposite_dir(int direction)
+bool SetCursorPosition(short x, short y)
 {
-	return (direction + 2) % 4;
+#ifdef _WIN64
+	static HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+	return SetConsoleCursorPosition(console, { x, y });
+#elif
+	return false;
+#endif // _WIN64
+}
+void ThreadWait(unsigned int ms)
+{
+	std::this_thread::sleep_for(std::chrono::microseconds(ms));
 }
 
-// Выводит часть матрицы, содержащию полезную информацию
-void print(std::vector<std::vector<Cell>>& m, COORD ivan = { 0,0 });
-Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_mode = true, bool interactive_mode = false, int interactive_mode_speed = 50);
-
-
-int main()
+void print(std::vector<std::vector<Cell>>& m, std::pair<int,int> ivan)
 {
-	size_t matrix_size = 10;
-	Fairyland world;
-
-	Result res = Walk_Through(&world, matrix_size, true, true);
-	
-	if (res.turns_until_meet == -1)
-	{
-		std::cout << "Cannot find path" << std::endl;
-	}
-	else
-	{
-		res.matrix[res.elena_pos.first][res.elena_pos.second].state = '&';
-	}
-	res.matrix[res.ivan_pos.first][res.ivan_pos.second].state = '@';
-
-	print(res.matrix);
-
-	std::cout << "Turns until meet = " << res.turns_until_meet << std::endl;
-	std::cout << "Turns until full exploration = " << res.turns_until_full_research << std::endl;
-
-}
-void print(std::vector<std::vector<Cell>>& m, COORD ivan)
-{
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), { 0, 0 });
+	SetCursorPosition(0, 0);
 	std::cout << "----------------------------------------------\n";
-	for (int i = 0; i < m.size(); i++)
+	for (size_t i = 0; i < m.size(); i++)
 	{
-		for (int j = 0; j < m[0].size(); j++)
+		for (size_t j = 0; j < m[0].size(); j++)
 			std::cout << m[j][i].state;
 
 		std::cout << std::endl;
 	}
 	std::cout << "----------------------------------------------\n";
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), { ivan.X, short(ivan.Y + 1) });
+	SetCursorPosition(ivan.first, (short)(ivan.second + 1));
 	std::cout << '@';
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), { 0, (short)(m.size() + 2) });
+	SetCursorPosition(0, short(m.size() + 2));
 }
-Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_mode, bool interactive_mode, int interactive_mode_speed)
+void print(std::vector<std::vector<Cell>>& m)
 {
-	Result result;
+	SetCursorPosition(0, 0);
+	std::cout << "----------------------------------------------\n";
+	for (size_t i = 0; i < m.size(); i++)
+	{
+		for (size_t j = 0; j < m[0].size(); j++)
+			std::cout << m[j][i].state;
 
+		std::cout << std::endl;
+	}
+	std::cout << "----------------------------------------------\n";
+	SetCursorPosition(0, short(m.size() + 2));
+}
+
+Result Walk_Through(Fairyland* land, unsigned int matrix_size, bool full_exploration_mode, bool realtime_mode, int realtime_mode_speed)
+{
+	// раздражает
+#pragma warning(disable : 26451)
+
+	Result result;
 	// Матрица создаётся размером 2 * n + 1, что бы была возможность пройти в любую сторону
 	std::vector<std::vector<Cell>> matrix(2 * matrix_size + 1, std::vector<Cell>(2 * matrix_size + 1, { ' ', -1 }));
 
 	// Принимается что Иван находится в центре матрицы
-	const int x_start = matrix_size;
-	const int y_start = matrix_size;
+	const unsigned int x_start = matrix_size;
+	const unsigned int y_start = matrix_size;
 
 
 	// Координаты текущей позиции Ивана в матрице
-	int x = x_start;
-	int y = y_start;
+	unsigned int x = x_start;
+	unsigned int y = y_start;
 
+	// Если значение останется равно -1, то встреча не произошла
 	result.turns_until_meet = -1;
 
 
@@ -105,12 +82,13 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 
 	matrix[x][y].state = '.';
 
+	bool realtime_mode_compatibility = SetCursorPosition(0, 0);
 	while (true)
 	{
-		if (interactive_mode)
+		if (realtime_mode && realtime_mode_compatibility)
 		{
 			print(matrix, { short(x),short(y) });
-			std::this_thread::sleep_for(std::chrono::milliseconds(interactive_mode_speed));
+			ThreadWait(realtime_mode_speed);
 		}
 
 		int direction = -1;
@@ -120,19 +98,19 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 		// Поиск стен и доступных путей
 		for (size_t i = 0; i < 4; i++)
 		{
+
 			if (!land->canGo(Character::Ivan, dirs[i]))
 				matrix[x + xMove[i]][y + yMove[i]].state = '#';
 			else
 			{
 				if (matrix[x + xMove[i]][y + yMove[i]].state != '.')
 				{
-
 					ways_count++;
-					direction = i;
+					direction = (int)i;
 				}
 			}
 		}
-
+#pragma warning(default: 26451)
 
 		forward = true;
 		// Если доступных путей нет, то идем назад
@@ -142,6 +120,7 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 			direction = matrix[x][y].from;
 		}
 
+		// Если встреча произошла
 		if (land->go(dirs[direction], Direction::Pass))
 		{
 			result.turns_until_meet = land->getTurnCount();
@@ -149,6 +128,7 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 			result.elena_pos.first = x + xMove[direction];
 			result.elena_pos.second = y + yMove[direction];
 
+			// Если full_exploration_mode == true, то алгоритм пройдет лабиринт до последней клетки
 			if (!full_exploration_mode)
 				break;
 		}
@@ -170,7 +150,6 @@ Result Walk_Through(Fairyland* land, size_t matrix_size, bool full_exploration_m
 		}
 	}
 	
-
 	result.ivan_pos.first = x;
 	result.ivan_pos.second = y;
 	
